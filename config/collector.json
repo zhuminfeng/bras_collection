@@ -1,0 +1,33 @@
+{
+    "ports": [
+        {
+            "pci_addr": "0000:81:00.0",
+            "nb_rx_queues": 16,
+            "nb_tx_queues": 0,
+            "rx_desc": 8192,
+            "promiscuous": true,
+            "mbuf_pool_size": 524288
+        }
+    ],
+    "nb_workers": 14,
+    "nb_rx_queues": 14,
+
+    "dpdk_args": [
+        "-l", "0-31",
+        "-n", "4",
+        "--huge-dir", "/mnt/huge",
+        "--allow", "0000:81:00.0,rx_vec_en=1,mprq_en=1,mprq_log_stride_num=5"
+    ],
+
+    "hw_flow_steering": true,
+    "radius_queue": 0,
+    "pppoe_queue": 1,
+    "worker_queue_start": 2,
+
+    "bras_network":  "10.0.0.0",
+    "bras_netmask":  "255.0.0.0",
+    "radius_server_ips": ["192.168.1.100", "192.168.1.101"],
+
+    "output_dir": "/data/dpi_output",
+    "file_rotate_seconds": 300
+}

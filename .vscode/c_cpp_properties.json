@@ -1,0 +1,47 @@
+{
+    "configurations": [
+        {
+            "name":             "BCLinux-DPDK",
+            "cppStandard":      "c++17",
+            "cStandard":        "c11",
+            "intelliSenseMode": "linux-gcc-x64",
+
+            // compile_commands.json 优先（CMake自动生成，最准确）
+            "compileCommands":
+                "${workspaceFolder}/build_Release/compile_commands.json",
+
+            // 兜底 include 路径（compile_commands 不存在时使用）
+            "includePath": [
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/src",
+
+                // DPDK
+                "/usr/local/include/dpdk",
+                "/usr/include/dpdk",
+
+                // PcapPlusPlus
+                "/usr/local/include/pcapplusplus",
+                "/usr/include/pcapplusplus",
+
+                // nDPI
+                "/usr/local/include/ndpi",
+                "/usr/include/ndpi",
+
+                // spdlog
+                "/usr/local/include",
+                "/usr/include"
+            ],
+
+            // 宏定义（与CMakeLists.txt保持一致）
+            "defines": [
+                "ALLOW_EXPERIMENTAL_API",
+                "SPDLOG_FMT_EXTERNAL=0",
+                "__linux__",
+                "__x86_64__"
+            ],
+
+            "compilerPath": "/usr/bin/g++"
+        }
+    ],
+    "version": 4
+}
