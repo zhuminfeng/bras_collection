@@ -38,7 +38,7 @@ static uint32_t murmur32(const char* key, uint32_t len) {
     switch (len & 3) {
     case 3: tail |= (uint32_t)data[len-1] << 16; [[fallthrough]];
     case 2: tail |= (uint32_t)data[len-2] << 8;  [[fallthrough]];
-    case 1: tail |= data[len-3];
+    case 1: tail |= data[len-1];    // ★ 修正：len-3 → len-1
         tail *= 0xcc9e2d51; tail=(tail<<15)|(tail>>17);
         tail *= 0x1b873593; h ^= tail;
     }

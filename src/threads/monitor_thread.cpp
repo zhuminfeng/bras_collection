@@ -145,7 +145,7 @@ void MonitorThread::run()
 	if (output_thread_)
 	{
 		output_snap_.output_records =
-			output_thread_->stats().output_records.load();
+			output_thread_->getOutputRecords();
 	}
 
 	// ── 主循环：1秒一次轮询 ───────────────────────────────
@@ -275,28 +275,28 @@ void MonitorThread::doReport(uint64_t now_ms, uint64_t elapsed_ms)
 
 	// ── Output线程统计 ────────────────────────────────────
 	if (output_thread_)
-	{
-		uint64_t cur_out = output_thread_->stats()
-							   .output_records.load(std::memory_order_relaxed);
-		uint64_t delta = cur_out - output_snap_.output_records;
-		double rps = (double)delta / (elapsed_ms / 1000.0);
+    {
+        // ★ 改用 getOutputRecords() 替代 stats().output_records
+        uint64_t cur_out = output_thread_->getOutputRecords();
+        uint64_t delta   = cur_out - output_snap_.output_records;
+        double   rps     = (double)delta / (elapsed_ms / 1000.0);
 
-		auto depth = output_thread_->getQueueDepth();
-		spdlog::info(
-			"[Output] rps={:.0f} total={} "
-			"q_http={} q_tcp={} q_dns={} q_udp={} "
-			"q_radius={} running={}",
-			rps, cur_out,
-			depth.http_total,
-			depth.tcp_total,
-			depth.dns_total,
-			depth.udp_total,
-			depth.radius,
-			output_thread_->isRunning() ? "YES" : "NO");
+        auto depth = output_thread_->getQueueDepth();  // ★ 现已定义
+        spdlog::info(
+            "[Output] rps={:.0f} total={} "
+            "q_http={} q_tcp={} q_dns={} q_udp={} "
+            "q_radius={} running={}",
+            rps, cur_out,
+            depth.http_total,
+            depth.tcp_total,
+            depth.dns_total,
+            depth.udp_total,
+            depth.radius,
+            output_thread_->isRunning() ? "YES" : "NO");
 
-		output_snap_.output_records = cur_out;
-		total_out_rps = (uint64_t)rps;
-	}
+        output_snap_.output_records = cur_out;
+        total_out_rps = (uint64_t)rps;
+    }
 
 	// ── 分流器统计 ────────────────────────────────────────
 	if (dispatcher_)
@@ -469,7 +469,7 @@ void MonitorThread::doStallCheck(uint64_t now_ms)
 						"[Monitor] Restarting Worker#{} "
 						"(restart_count={})",
 						i, e.restart_count);
-					e.thread->restart();
+					// e.thread->restart();
 					++e.restart_count;
 					e.last_restart_ms = now_ms;
 				}
@@ -500,7 +500,7 @@ void MonitorThread::doStallCheck(uint64_t now_ms)
 				if (now_ms - e.last_restart_ms > MIN_RESTART_INTERVAL_MS)
 				{
 					spdlog::warn("[Monitor] Restarting Worker#{}...", i);
-					e.thread->restart();
+					// e.thread->restart();
 					++e.restart_count;
 					e.last_restart_ms = now_ms;
 				}
@@ -540,34 +540,48 @@ void MonitorThread::doStallCheck(uint64_t now_ms)
 // ─────��───────────────────────────────────────────────────
 void MonitorThread::doQueueCheck()
 {
-	if (!output_thread_)
-		return;
+    if (!output_thread_) return;
 
-	auto depth = output_thread_->getQueueDepth();
+    auto depth = output_thread_->getQueueDepth();
 
-	// HTTP队列水位（相对于单个Worker的队列容量）
-	float http_fill = (float)depth.http_total / (float)(HTTP_QUEUE_CAP *
-														std::max((uint16_t)1,
-																 (uint16_t)worker_entries_.size()));
-	if (http_fill >= cfg_.queue_warn_level)
-	{
-		alertQueueFull("http_q", http_fill);
-		summary_has_alert_.store(true, std::memory_order_relaxed);
-	}
+    // ★ 使用 LockFreeQueue 的实际容量（4096/4096/4096）
+    //   worker 数量作为分母
+    uint64_t nb_w = std::max((size_t)1, worker_entries_.size());
 
-	float radius_fill = (float)depth.radius / (float)RADIUS_QUEUE_CAP;
-	if (radius_fill >= cfg_.queue_warn_level)
-	{
-		alertQueueFull("radius_q", radius_fill);
-	}
+    // HTTP
+    float http_fill = (float)depth.http_total /
+                      (float)(4096ULL * nb_w);
+    if (http_fill >= cfg_.queue_warn_level)
+    {
+        alertQueueFull("http_q", http_fill);
+        summary_has_alert_.store(true, std::memory_order_relaxed);
+    }
 
-	float dns_fill = (float)depth.dns_total / (float)(DNS_QUEUE_CAP *
-													  std::max((uint16_t)1,
-															   (uint16_t)worker_entries_.size()));
-	if (dns_fill >= cfg_.queue_warn_level)
-	{
-		alertQueueFull("dns_q", dns_fill);
-	}
+    // Radius
+    float radius_fill = (float)depth.radius / 4096.0f;
+    if (radius_fill >= cfg_.queue_warn_level)
+    {
+        alertQueueFull("radius_q", radius_fill);
+        summary_has_alert_.store(true, std::memory_order_relaxed);
+    }
+
+    // DNS
+    float dns_fill = (float)depth.dns_total /
+                     (float)(4096ULL * nb_w);
+    if (dns_fill >= cfg_.queue_warn_level)
+    {
+        alertQueueFull("dns_q", dns_fill);
+        summary_has_alert_.store(true, std::memory_order_relaxed);
+    }
+
+    // UDP
+    float udp_fill = (float)depth.udp_total /
+                     (float)(4096ULL * nb_w);
+    if (udp_fill >= cfg_.queue_warn_level)
+    {
+        alertQueueFull("udp_q", udp_fill);
+        summary_has_alert_.store(true, std::memory_order_relaxed);
+    }
 }
 
 // ─────────────────────────────────────────────────────────

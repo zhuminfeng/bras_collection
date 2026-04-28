@@ -29,6 +29,16 @@ struct OutputThreadConfig {
     uint32_t     idle_sleep_us    = 1000;   // 空转休眠微秒
 };
 
+// ★ 队列水位快照（供 MonitorThread 查询）
+    struct QueueDepth {
+        uint64_t http_total  = 0;  // 所有 worker http_q 之和
+        uint64_t tcp_total   = 0;
+        uint64_t dns_total   = 0;
+        uint64_t udp_total   = 0;
+        uint64_t radius      = 0;  // 所有 signal radius_q 之和
+        uint64_t pppoe       = 0;
+    };
+
 // ─────────────────────────────────────────────────────────
 // OutputThread
 //
@@ -87,6 +97,25 @@ public:
     }
     uint64_t droppedTotal()  const {
         return stat_drop_.load(std::memory_order_relaxed);
+    }
+
+    QueueDepth getQueueDepth() const;
+
+    // ★ 伪 stats() 接口：返回一个只读统计对象供 Monitor 兼容
+    // （Monitor 只用 output_records，用 writtenTcp 等之和代替）
+    struct OutputStats {
+        std::atomic<uint64_t> output_records{0};
+    };
+    // 注意：不额外维护 OutputStats 对象，
+    // 直接在 getOutputRecords() 中返回所有写入量之和
+    uint64_t getOutputRecords() const {
+        return stat_tcp_.load(std::memory_order_relaxed)
+             + stat_http_.load(std::memory_order_relaxed)
+             + stat_onu_.load(std::memory_order_relaxed)
+             + stat_radius_.load(std::memory_order_relaxed)
+             + stat_pppoe_.load(std::memory_order_relaxed)
+             + stat_dns_.load(std::memory_order_relaxed)
+             + stat_udp_.load(std::memory_order_relaxed);
     }
 
 private:

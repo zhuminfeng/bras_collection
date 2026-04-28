@@ -315,3 +315,22 @@ void OutputThread::run() {
         stat_pppoe_.load(), stat_dns_.load(),
         stat_udp_.load());
 }
+
+OutputThread::QueueDepth OutputThread::getQueueDepth() const {
+    QueueDepth d{};
+    uint16_t nb_w = worker_count_.load(std::memory_order_relaxed);
+    for (uint16_t i = 0; i < nb_w; ++i) {
+        if (!worker_queues_[i]) continue;
+        d.http_total += worker_queues_[i]->http_q.size();
+        d.tcp_total  += worker_queues_[i]->tcp_q.size();
+        d.dns_total  += worker_queues_[i]->dns_q.size();
+        d.udp_total  += worker_queues_[i]->udp_q.size();
+    }
+    uint8_t nb_s = signal_count_.load(std::memory_order_relaxed);
+    for (uint8_t i = 0; i < nb_s; ++i) {
+        if (!signal_queues_[i]) continue;
+        d.radius += signal_queues_[i]->radius_q.size();
+        d.pppoe  += signal_queues_[i]->pppoe_q.size();
+    }
+    return d;
+}
