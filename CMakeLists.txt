@@ -118,14 +118,15 @@ set(SOURCES_PARSER
     src/parser/dns_parser.cpp
     src/parser/ndpi_analyzer.cpp
     src/parser/cpe_detector.cpp
-    src/parser/onu_parser.cpp              # ★ 新增
+    src/parser/onu_parser.cpp       
+	src/parser/stb_detector.cpp       
 )
 
 set(SOURCES_SESSION
     src/session/flow_table.cpp
     src/session/http_session.cpp
     src/session/udp_session.cpp
-    src/session/radius_session_manager.cpp # ★ 新增
+    src/session/radius_session_manager.cpp 
 )
 
 set(SOURCES_THREADS
@@ -140,8 +141,10 @@ set(SOURCES_OUTPUT
     src/output/dcs_writer.cpp
     src/output/raw_file_manager.cpp
     src/output/http_dcs_serializer.cpp
-    src/output/radius_dcs_serializer.cpp   # ★ 新增
-    src/output/onu_dcs_serializer.cpp      # ★ 新增
+    src/output/radius_dcs_serializer.cpp   
+    src/output/onu_dcs_serializer.cpp      
+	src/output/ping_dcs_serializer.cpp
+	src/output/stb_dcs_serializer.cpp
 )
 
 set(SOURCES_UTILS

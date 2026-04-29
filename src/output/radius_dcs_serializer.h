@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../record/radius_record.h"
+#include "../record/record_types.h"
 #include <cstddef>
 
 // ─────────────────────────────────────────────────────────
@@ -11,10 +11,11 @@
 // 空字符串字段：输出空（两个连续Tab），不输出NONE
 // 数值字段为0：正常输出 "0"
 // ─────────────────────────────────────────────────────────
-class RadiusDcsSerializer {
+class RadiusDcsSerializer
+{
 public:
-    // buf_size 建议 >= 4096
-    static size_t serialize(const RadiusRecord& r,
-                            char*  buf,
-                            size_t buf_size);
+	// buf_size 建议 >= 4096
+	static size_t serialize(const RadiusRecord &r,
+							char *buf,
+							size_t buf_size);
 };
